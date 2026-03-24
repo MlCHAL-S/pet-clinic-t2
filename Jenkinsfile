@@ -2,19 +2,11 @@ pipeline {
     agent any
 
     stages {
-        stage('Validate') {
+        stage('Verify') {
             steps {
                 sh '''
-                    echo "Validating..."
-                    ./mvnw validate
-                '''
-            }
-        }
-        stage('Test') {
-            steps {
-                sh '''
-                    echo "Running tests..."
-                    ./mvnw clean test
+                    echo "Running verification..."
+                    ./mvnw verify
                 '''
             }
         }
