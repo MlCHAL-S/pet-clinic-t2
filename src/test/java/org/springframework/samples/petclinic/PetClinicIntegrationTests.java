@@ -32,7 +32,7 @@ import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.web.client.RestTemplate;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = "logging.level.sql=DEBUG")
-public class PetClinicIT {
+public class PetClinicIntegrationTests {
 
 	@LocalServerPort
 	int port;

@@ -50,7 +50,7 @@ import org.springframework.http.ResponseEntity;
 @SpringBootTest(webEnvironment = RANDOM_PORT,
 		properties = { "spring.web.error.include-message=ALWAYS", "management.endpoints.access.default=none" })
 @AutoConfigureTestRestTemplate
-class CrashControllerIT {
+class CrashControllerIntegrationTests {
 
 	@Value("${local.server.port}")
 	private int port;

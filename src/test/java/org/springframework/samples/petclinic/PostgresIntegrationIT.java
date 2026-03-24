@@ -52,7 +52,7 @@ import org.testcontainers.DockerClientFactory;
 		"spring.docker.compose.start.arguments=--force-recreate,--renew-anon-volumes,postgres" })
 @ActiveProfiles("postgres")
 @DisabledInNativeImage
-public class PostgresIT {
+public class PostgresIntegrationIT {
 
 	@LocalServerPort
 	int port;
