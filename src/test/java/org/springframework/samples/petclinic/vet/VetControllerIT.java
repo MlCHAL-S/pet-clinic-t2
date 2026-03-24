@@ -43,7 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(VetController.class)
 @DisabledInNativeImage
 @DisabledInAotMode
-class VetControllerTests {
+class VetControllerIT {
 
 	@Autowired
 	private MockMvc mockMvc;

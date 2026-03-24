@@ -43,7 +43,7 @@ import java.util.Optional;
 @WebMvcTest(VisitController.class)
 @DisabledInNativeImage
 @DisabledInAotMode
-class VisitControllerTests {
+class VisitControllerIT {
 
 	private static final int TEST_OWNER_ID = 1;
 
