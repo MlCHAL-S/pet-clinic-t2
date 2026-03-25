@@ -6,7 +6,7 @@ pipeline {
             steps {
                 sh '''
                     echo "Running verification..."
-                    ./mvnw verify
+                    ./mvnw clean verify
                 '''
             }
         }
@@ -27,6 +27,17 @@ pipeline {
                     echo "Running dependency scan..."
                     ./mvnw org.owasp:dependency-check-maven:check
                 '''
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    def shortSha = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    sh """
+                        echo "Building Docker image..."
+                        docker build -t petclinic:${shortSha} .
+                    """
+                }
             }
         }
     }

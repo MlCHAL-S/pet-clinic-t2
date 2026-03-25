@@ -1,11 +1,35 @@
 services:
+
   jenkins:
-    image: jenkins/jenkins:lts
+    build:
+      context: .
+      dockerfile: ./jenkins/Dockerfile.jenkins 
+    image: jenkins-docker:lts
     container_name: jenkins
+    environment:
+      DOCKER_HOST: tcp://docker:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs/client
     ports:
       - "8080:8080"
     volumes:
       - jenkins:/var/jenkins_home
+      - docker-certs-client:/certs/client:ro
+    networks:
+      - petclinic
+    restart: unless-stopped
+    depends_on:
+      - docker
+
+  docker:
+    image: docker:dind
+    container_name: docker
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: /certs
+    volumes:
+      - docker-certs-client:/certs/client
+      - dind-storage:/var/lib/docker
     networks:
       - petclinic
     restart: unless-stopped
@@ -30,3 +54,5 @@ volumes:
     name: jenkins
   sonarqube:
     name: sonarqube
+  docker-certs-client:
+  dind-storage:

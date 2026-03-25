@@ -1,0 +1,13 @@
+.git
+.gitignore
+.idea
+docker-compose.yml
+Jenkinsfile
+README.md
+LICENSE.txt
+src
+.mvn
+mvnw
+mvnw.cmd
+target/*
+!target/*.jar
