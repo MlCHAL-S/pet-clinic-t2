@@ -21,5 +21,13 @@ pipeline {
                 }
             }
         }
+        stage('Dependency Scan') {
+            steps {
+                sh '''
+                    echo "Running dependency scan..."
+                    ./mvnw org.owasp:dependency-check-maven:check
+                '''
+            }
+        }
     }
 }
