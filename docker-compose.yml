@@ -21,6 +21,8 @@ services:
       JENKINS_SECRET: ${JENKINS_JAVA17_JDK}
     networks:
       - petclinic
+    volumes:
+      - java17jdk-m2:/home/jenkins/.m2
     restart: unless-stopped
 
   jenkins-dockercli:
@@ -91,3 +93,4 @@ volumes:
   docker-certs-client:
   dind-storage:
   nexus:
+  java17jdk-m2:
