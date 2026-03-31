@@ -28,31 +28,31 @@ pipeline {
         //         }
         //     }
         // }
-        // stage('Dependency Scan') {
-        //     agent { label 'java17jdk' }
-        //     steps {
-        //         sh '''
-        //             echo "Running dependency scan..."
-        //             ./mvnw org.owasp:dependency-check-maven:check
-        //         '''
-        //     }
-        // }
-        stage('Push to Nexus') {
+        stage('Dependency Scan') {
             agent { label 'java17jdk' }
             steps {
-                withCredentials([
-                    usernamePassword(credentialsId: 'NEXUS_CREDS', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')
-                ]) {
-                    configFileProvider([configFile(fileId: 'nexus-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-                        sh '''
-                            echo "Deploying to Nexus..."
-                            ./mvnw -s $MAVEN_SETTINGS clean deploy -DskipTests
-                        '''
-                    }
-                }
-                
+                sh '''
+                    echo "Running dependency scan..."
+                    ./mvnw org.owasp:dependency-check-maven:check
+                '''
             }
         }
+        // stage('Push to Nexus') {
+        //     agent { label 'java17jdk' }
+        //     steps {
+        //         withCredentials([
+        //             usernamePassword(credentialsId: 'NEXUS_CREDS', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')
+        //         ]) {
+        //             configFileProvider([configFile(fileId: 'nexus-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+        //                 sh '''
+        //                     echo "Deploying to Nexus..."
+        //                     ./mvnw -s $MAVEN_SETTINGS clean deploy -DskipTests
+        //                 '''
+        //             }
+        //         }
+                
+        //     }
+        // }
         // stage('Build Docker Image') {
         //     agent { label 'dockercli' }
         //     steps {
