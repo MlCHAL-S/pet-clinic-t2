@@ -7,15 +7,15 @@ pipeline {
     }
 
     stages {
-        stage('Verify') {
-            agent { label 'java17jdk' }
-            steps {
-                sh '''
-                    echo "Running verification..."
-                    ./mvnw clean verify
-                '''
-            }
-        }
+        // stage('Verify') {
+        //     agent { label 'java17jdk' }
+        //     steps {
+        //         sh '''
+        //             echo "Running verification..."
+        //             ./mvnw clean verify
+        //         '''
+        //     }
+        // }
         // stage('SonarQube') {
         //     agent { label 'java17jdk' }
         //     steps {
@@ -37,18 +37,34 @@ pipeline {
         //         '''
         //     }
         // }
-        stage('Build Docker Image') {
-            agent { label 'dockercli' }
+        stage('Push to Nexus') {
+            agent { label 'java17jdk' }
             steps {
-                script {
-                    def shortSha = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    sh """
-                        echo "Building Docker image..."
-                        docker build -t petclinic:${shortSha} .
-                    """
+                withCredentials([
+                    usernamePassword(credentialsId: 'NEXUS_CREDS', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')
+                ]) {
+                    configFileProvider([configFile(fileId: 'nexus-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+                        sh '''
+                            echo "Deploying to Nexus..."
+                            ./mvnw -s $MAVEN_SETTINGS clean deploy -DskipTests
+                        '''
+                    }
                 }
+                
             }
         }
+        // stage('Build Docker Image') {
+        //     agent { label 'dockercli' }
+        //     steps {
+        //         script {
+        //             def shortSha = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+        //             sh """
+        //                 echo "Building Docker image..."
+        //                 docker build -t petclinic:${shortSha} .
+        //             """
+        //         }
+        //     }
+        // }
         // stage('Push Image') {
         //     agent { label 'dockercli' }
         //     steps {

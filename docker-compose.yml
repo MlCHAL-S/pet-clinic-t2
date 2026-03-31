@@ -28,7 +28,7 @@ services:
       context: .
       dockerfile: ./agents/Dockerfile.docker-cli
     environment:
-      DOCKER_HOST: tcp://docker-dind:2376
+      DOCKER_HOST: tcp://docker:2376
       DOCKER_TLS_VERIFY: "1"
       DOCKER_CERT_PATH: /certs/client
       JENKINS_URL: http://jenkins:8080
@@ -42,11 +42,11 @@ services:
       - petclinic
     restart: unless-stopped
     depends_on:
-      - docker-dind
+      - docker
     
-  docker-dind:
+  docker:
     image: docker:dind
-    container_name: docker-dind
+    container_name: docker
     privileged: true
     environment:
       DOCKER_TLS_CERTDIR: /certs
@@ -68,6 +68,17 @@ services:
       - petclinic
     restart: unless-stopped
 
+  nexus:
+    image: sonatype/nexus3:latest
+    container_name: nexus
+    ports:
+      - "8081:8081"
+    volumes:
+      - nexus:/nexus-data
+    networks:
+      - petclinic
+    restart: unless-stopped
+
 networks:
   petclinic:
     name: petclinic
@@ -79,3 +90,4 @@ volumes:
     name: sonarqube
   docker-certs-client:
   dind-storage:
+  nexus:
