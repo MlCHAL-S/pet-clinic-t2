@@ -1,6 +1,0 @@
-# This is Jenkins + Docker CLI
-FROM docker:dind AS dockercli
-FROM jenkins/jenkins:lts
-USER root
-COPY --from=dockercli /usr/local/bin/docker /usr/local/bin/docker
-USER jenkins

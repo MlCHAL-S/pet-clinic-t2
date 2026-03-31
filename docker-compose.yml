@@ -1,29 +1,52 @@
 services:
 
   jenkins:
-    build:
-      context: .
-      dockerfile: ./jenkins/Dockerfile.jenkins 
-    image: jenkins-docker:lts
+    image: jenkins/jenkins:lts
     container_name: jenkins
-    environment:
-      DOCKER_HOST: tcp://docker:2376
-      DOCKER_TLS_VERIFY: "1"
-      DOCKER_CERT_PATH: /certs/client
     ports:
       - "8080:8080"
     volumes:
       - jenkins:/var/jenkins_home
+    networks:
+      - petclinic
+    restart: unless-stopped
+
+  jenkins-java17jdk:
+    image: jenkins/inbound-agent:latest-jdk17
+    container_name: jenkins-java17jdk
+    environment:
+      JENKINS_URL: http://jenkins:8080
+      JENKINS_AGENT_NAME: jenkins-java17jdk
+      JENKINS_AGENT_WORKDIR: /home/jenkins/java17jdk
+      JENKINS_SECRET: ${JENKINS_JAVA17_JDK}
+    networks:
+      - petclinic
+    restart: unless-stopped
+
+  jenkins-dockercli:
+    build:
+      context: .
+      dockerfile: ./agents/Dockerfile.docker-cli
+    environment:
+      DOCKER_HOST: tcp://docker-dind:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs/client
+      JENKINS_URL: http://jenkins:8080
+      JENKINS_AGENT_NAME: jenkins-dockercli
+      JENKINS_AGENT_WORKDIR: /home/jenkins/dockercli
+      JENKINS_SECRET: ${JENKINS_DOCKER_CLI}
+    container_name: jenkins-dockercli
+    volumes:
       - docker-certs-client:/certs/client:ro
     networks:
       - petclinic
     restart: unless-stopped
     depends_on:
-      - docker
-
-  docker:
+      - docker-dind
+    
+  docker-dind:
     image: docker:dind
-    container_name: docker
+    container_name: docker-dind
     privileged: true
     environment:
       DOCKER_TLS_CERTDIR: /certs

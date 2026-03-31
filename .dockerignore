@@ -11,3 +11,5 @@ mvnw
 mvnw.cmd
 target/*
 !target/*.jar
+agents/
+.env*
