@@ -4,39 +4,56 @@ pipeline {
     environment {
         REPO_NAME = credentials('REPO_NAME')
         PROJECT_ID = credentials('PROJECT_ID')
+        REGISTRY_HOST = 'europe-west1-docker.pkg.dev'
+        IMAGE_NAME = 'petclinic'
     }
 
     stages {
-        // stage('Verify') {
-        //     agent { label 'java17jdk' }
-        //     steps {
-        //         sh '''
-        //             echo "Running verification..."
-        //             ./mvnw clean verify
-        //         '''
-        //     }
-        // }
-        // stage('SonarQube') {
-        //     agent { label 'java17jdk' }
-        //     steps {
-        //         withSonarQubeEnv('sonarqube') {
-        //             sh """
-        //                 ./mvnw org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-        //                     -Dsonar.projectKey=petclinic \
-        //                     -Dsonar.projectName='petclinic'
-        //             """
-        //         }
-        //     }
-        // }
-        // stage('Dependency Scan') {
-        //     agent { label 'java17jdk' }
-        //     steps {
-        //         sh '''
-        //             echo "Running dependency scan..."
-        //             ./mvnw org.owasp:dependency-check-maven:check
-        //         '''
-        //     }
-        // }
+        stage('Init metadata') {
+            agent { label 'java17jdk' }
+            steps {
+                script {
+                    echo 'Initializing metadata...'
+                    env.SHORT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                }
+                echo "SHORT_SHA=${env.SHORT_SHA}"
+            }
+        }
+
+        stage('Verify') {
+            agent { label 'java17jdk' }
+            steps {
+                sh '''
+                    echo 'Running verification...'
+                    ./mvnw clean verify
+                '''
+            }
+        }
+
+        stage('SonarQube') {
+            agent { label 'java17jdk' }
+            steps {
+                withSonarQubeEnv('sonarqube') {
+                    sh """
+                        echo 'Running SonarQube analysis...'
+                        ./mvnw org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+                            -Dsonar.projectKey=petclinic \
+                            -Dsonar.projectName='petclinic'
+                    """
+                }
+            }
+        }
+
+        stage('Dependency Scan') {
+            agent { label 'java17jdk' }
+            steps {
+                sh '''
+                    echo "Running dependency scan..."
+                    ./mvnw org.owasp:dependency-check-maven:check
+                '''
+            }
+        }
+
         stage('Push to Nexus') {
             agent { label 'java17jdk' }
             steps {
@@ -46,52 +63,41 @@ pipeline {
                     configFileProvider([configFile(fileId: 'nexus-maven-settings', variable: 'MAVEN_SETTINGS')]) {
                         sh '''
                             echo "Deploying to Nexus..."
-                            ./mvnw -s "$MAVEN_SETTINGS" clean deploy -DskipTests
+                            ./mvnw -s "$MAVEN_SETTINGS" deploy -DskipTests
                         '''
                     }
                 }
+
+                echo "Stashing artifacts for Docker build..."
+                stash name: 'app-jar', includes: 'target/*.jar'
+                stash name: 'docker-files', includes: 'Dockerfile,.dockerignore'
             }
         }
-        stage('Pull binary from Nexus') {
+
+        stage('Build image') {
             agent { label 'dockercli' }
             steps {
-                checkout scm
-                withCredentials([
-                    usernamePassword(credentialsId: 'NEXUS_CREDS', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')
-                ]) {
-                    configFileProvider([configFile(fileId: 'nexus-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-                        sh '''
-                            echo "Pulling binary from Nexus..."
-                            mkdir -p target
-                            ./mvnw -s "$MAVEN_SETTINGS" \
-                                org.apache.maven.plugins:maven-dependency-plugin:3.10.0:copy \
-                                -Dartifact=org.springframework.samples:spring-petclinic:4.0.0-SNAPSHOT:jar \
-                                -DoutputDirectory=target \
-                                -Dmdep.stripVersion=true
+                unstash 'app-jar'
+                unstash 'docker-files'
 
-                            echo "Contents of target directory:"
-                            ls -la target
-                        '''
-                    }
-                }
                 script {
-                    def shortSha = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    echo "Building Docker image..."
+
                     sh """
-                        echo "Building Docker image..."
                         docker buildx build \
                             --platform linux/amd64 \
                             --load \
-                            -t petclinic:${shortSha} .
+                            -t petclinic:${env.SHORT_SHA} .
                     """
                 }
             }
         }
+
         // stage('Push Image') {
         //     agent { label 'dockercli' }
         //     steps {
         //         script {
-        //             def shortSha = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-        //             def image = "europe-west1-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/petclinic:${shortSha}"
+        //             def image = "${REGISTRY_HOST}/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${env.SHORT_SHA}"
 
         //             withCredentials
         //             sh """
@@ -101,5 +107,6 @@ pipeline {
         //         }
         //     }
         // }
+
     }
 }
