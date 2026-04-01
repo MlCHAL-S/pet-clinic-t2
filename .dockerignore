@@ -13,3 +13,4 @@ target/*
 !target/*.jar
 agents/
 .env*
+key.json

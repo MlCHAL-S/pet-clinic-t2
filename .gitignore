@@ -49,3 +49,4 @@ _site/
 
 ### env ###
 .env*
+key.json

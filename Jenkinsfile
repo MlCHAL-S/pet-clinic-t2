@@ -4,6 +4,7 @@ pipeline {
     environment {
         REPO_NAME = credentials('REPO_NAME')
         PROJECT_ID = credentials('PROJECT_ID')
+        SERVICE_ACCOUNT_NAME = credentials('GCLOUD_SA')
         REGISTRY_HOST = 'europe-west1-docker.pkg.dev'
         IMAGE_NAME = 'petclinic'
     }
@@ -87,26 +88,33 @@ pipeline {
                         docker buildx build \
                             --platform linux/amd64 \
                             --load \
-                            -t petclinic:${env.SHORT_SHA} .
+                            -t ${REGISTRY_HOST}/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${env.SHORT_SHA} .
                     """
                 }
             }
         }
 
-        // stage('Push Image') {
-        //     agent { label 'dockercli' }
-        //     steps {
-        //         script {
-        //             def image = "${REGISTRY_HOST}/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${env.SHORT_SHA}"
+        stage('Push Image') {
+            agent { label 'dockercli' }
+            steps {
+                script {
+                    def image = "${REGISTRY_HOST}/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${env.SHORT_SHA}"
 
-        //             withCredentials
-        //             sh """
-        //                 echo "Pushing Docker image..."
-        //                 docker push ${image}
-        //             """
-        //         }
-        //     }
-        // }
+                    withCredentials([file(credentialsId: 'GCLOUD_CRED', variable: 'GCP_KEY_FILE')]) {
+                        sh """
+                            echo "Authenticating with GCP..."
+                            gcloud auth activate-service-account "${SERVICE_ACCOUNT_NAME}" --key-file="$GCP_KEY_FILE"
+
+                            echo "Configuring Docker to use GCP credentials..."
+                            gcloud auth configure-docker ${REGISTRY_HOST} --quiet
+
+                            echo "Pushing Docker image to registry..."
+                            docker push ${image}
+                        """
+                    }
+                }
+            }
+        }
 
     }
 }
