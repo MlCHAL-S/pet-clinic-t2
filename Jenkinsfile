@@ -2,11 +2,11 @@ pipeline {
     agent none
 
     environment {
-        REPO_NAME = credentials('REPO_NAME')
         PROJECT_ID = credentials('PROJECT_ID')
         SERVICE_ACCOUNT_NAME = credentials('GCLOUD_SA')
         REGISTRY_HOST = 'europe-west1-docker.pkg.dev'
         IMAGE_NAME = 'petclinic'
+        GCLOUD_REPO_NAME = credentials('G_REPO_NAME')
     }
 
     stages {
@@ -88,7 +88,7 @@ pipeline {
                         docker buildx build \
                             --platform linux/amd64 \
                             --load \
-                            -t ${REGISTRY_HOST}/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${env.SHORT_SHA} .
+                            -t ${REGISTRY_HOST}/${PROJECT_ID}/${GCLOUD_REPO_NAME}/${IMAGE_NAME}:${env.SHORT_SHA} .
                     """
                 }
             }
@@ -98,7 +98,7 @@ pipeline {
             agent { label 'dockercli' }
             steps {
                 script {
-                    def image = "${REGISTRY_HOST}/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${env.SHORT_SHA}"
+                    def image = "${REGISTRY_HOST}/${PROJECT_ID}/${GCLOUD_REPO_NAME}/${IMAGE_NAME}:${env.SHORT_SHA}"
 
                     withCredentials([file(credentialsId: 'GCLOUD_CRED', variable: 'GCP_KEY_FILE')]) {
                         sh """
