@@ -2,11 +2,12 @@ pipeline {
     agent none
 
     environment {
-        PROJECT_ID = credentials('PROJECT_ID')
-        SERVICE_ACCOUNT_NAME = credentials('GCLOUD_SA')
-        REGISTRY_HOST = 'europe-west1-docker.pkg.dev'
-        IMAGE_NAME = 'petclinic'
-        GCLOUD_REPO_NAME = credentials('G_REPO_NAME')
+        G_PROJECT_ID = credentials('G_PROJECT_ID')
+        G_SA_NAME= credentials('G_SA_NAME')
+        G_REPO_NAME = credentials('G_REPO_NAME')
+
+        G_REGISTRY_HOST = 'europe-central2-docker.pkg.dev'
+        G_IMAGE_NAME = 'petclinic'
     }
 
     stages {
@@ -88,7 +89,7 @@ pipeline {
                         docker buildx build \
                             --platform linux/amd64 \
                             --load \
-                            -t ${REGISTRY_HOST}/${PROJECT_ID}/${GCLOUD_REPO_NAME}/${IMAGE_NAME}:${env.SHORT_SHA} .
+                            -t ${G_REGISTRY_HOST}/${G_PROJECT_ID}/${G_REPO_NAME}/${G_IMAGE_NAME}:${env.SHORT_SHA} .
                     """
                 }
             }
@@ -98,15 +99,15 @@ pipeline {
             agent { label 'dockercli' }
             steps {
                 script {
-                    def image = "${REGISTRY_HOST}/${PROJECT_ID}/${GCLOUD_REPO_NAME}/${IMAGE_NAME}:${env.SHORT_SHA}"
+                    def image = "${G_REGISTRY_HOST}/${G_PROJECT_ID}/${G_REPO_NAME}/${G_IMAGE_NAME}:${env.SHORT_SHA}"
 
-                    withCredentials([file(credentialsId: 'GCLOUD_CRED', variable: 'GCP_KEY_FILE')]) {
+                    withCredentials([file(credentialsId: 'G_SA_KEY', variable: 'GCP_KEY_FILE')]) {
                         sh """
                             echo "Authenticating with GCP..."
-                            gcloud auth activate-service-account "${SERVICE_ACCOUNT_NAME}" --key-file="$GCP_KEY_FILE"
+                            gcloud auth activate-service-account "${G_SA_NAME}" --key-file="$GCP_KEY_FILE"
 
                             echo "Configuring Docker to use GCP credentials..."
-                            gcloud auth configure-docker ${REGISTRY_HOST} --quiet
+                            gcloud auth configure-docker ${G_REGISTRY_HOST} --quiet
 
                             echo "Pushing Docker image to registry..."
                             docker push ${image}
