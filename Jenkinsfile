@@ -28,43 +28,64 @@ pipeline {
         //         }
         //     }
         // }
-        stage('Dependency Scan') {
-            agent { label 'java17jdk' }
-            steps {
-                sh '''
-                    echo "Running dependency scan..."
-                    ./mvnw org.owasp:dependency-check-maven:check
-                '''
-            }
-        }
-        // stage('Push to Nexus') {
+        // stage('Dependency Scan') {
         //     agent { label 'java17jdk' }
         //     steps {
-        //         withCredentials([
-        //             usernamePassword(credentialsId: 'NEXUS_CREDS', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')
-        //         ]) {
-        //             configFileProvider([configFile(fileId: 'nexus-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-        //                 sh '''
-        //                     echo "Deploying to Nexus..."
-        //                     ./mvnw -s $MAVEN_SETTINGS clean deploy -DskipTests
-        //                 '''
-        //             }
-        //         }
-                
+        //         sh '''
+        //             echo "Running dependency scan..."
+        //             ./mvnw org.owasp:dependency-check-maven:check
+        //         '''
         //     }
         // }
-        // stage('Build Docker Image') {
-        //     agent { label 'dockercli' }
-        //     steps {
-        //         script {
-        //             def shortSha = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-        //             sh """
-        //                 echo "Building Docker image..."
-        //                 docker build -t petclinic:${shortSha} .
-        //             """
-        //         }
-        //     }
-        // }
+        stage('Push to Nexus') {
+            agent { label 'java17jdk' }
+            steps {
+                withCredentials([
+                    usernamePassword(credentialsId: 'NEXUS_CREDS', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')
+                ]) {
+                    configFileProvider([configFile(fileId: 'nexus-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+                        sh '''
+                            echo "Deploying to Nexus..."
+                            ./mvnw -s "$MAVEN_SETTINGS" clean deploy -DskipTests
+                        '''
+                    }
+                }
+            }
+        }
+        stage('Pull binary from Nexus') {
+            agent { label 'dockercli' }
+            steps {
+                checkout scm
+                withCredentials([
+                    usernamePassword(credentialsId: 'NEXUS_CREDS', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')
+                ]) {
+                    configFileProvider([configFile(fileId: 'nexus-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+                        sh '''
+                            echo "Pulling binary from Nexus..."
+                            mkdir -p target
+                            ./mvnw -s "$MAVEN_SETTINGS" \
+                                org.apache.maven.plugins:maven-dependency-plugin:3.10.0:copy \
+                                -Dartifact=org.springframework.samples:spring-petclinic:4.0.0-SNAPSHOT:jar \
+                                -DoutputDirectory=target \
+                                -Dmdep.stripVersion=true
+
+                            echo "Contents of target directory:"
+                            ls -la target
+                        '''
+                    }
+                }
+                script {
+                    def shortSha = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    sh """
+                        echo "Building Docker image..."
+                        docker buildx build \
+                            --platform linux/amd64 \
+                            --load \
+                            -t petclinic:${shortSha} .
+                    """
+                }
+            }
+        }
         // stage('Push Image') {
         //     agent { label 'dockercli' }
         //     steps {
